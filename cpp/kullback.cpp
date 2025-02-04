@@ -36,7 +36,7 @@ EM_JS(void, drawLine, (double x1, double y1, double x2, double y2, const char* c
     ctx.globalAlpha = 1.0;
 });
 
-EM_JS(void, drawGraph, (int* x, int* y, const char** colors, int points, double xAxis, double width, double opacity), {
+EM_JS(void, drawGraph, (int* x, int* y, const char** colors, int points, double xAxis, double width, double opacity, double graphWidth), {
     var canvas = document.getElementById('graphCanvas');
     var ctx = canvas.getContext('2d');
     ctx.globalAlpha = opacity;
@@ -46,7 +46,10 @@ EM_JS(void, drawGraph, (int* x, int* y, const char** colors, int points, double 
     var xVals = new Int32Array(Module.HEAP32.buffer, x, points);
     var yVals = new Int32Array(Module.HEAP32.buffer, y, points);
     var controlPoints = {};
-    const bezierAmount = points;
+    var bezierAmount = points;
+    if(graphWidth < 700) {
+        points *= (700/graphWidth)*2;
+    }
     for(let i = 0; i < points; i++) {
         let X = xVals[i];
         let Y = yVals[i];
@@ -283,7 +286,7 @@ void redrawPlot(int highlightLine, int highlightPoint, int showLabelPoint, doubl
         i++;
     }
 
-    drawGraph(x_points.data(), y_points.data(), colorsArray, x_points.size(), xAxisY, 2.0, 1);
+    drawGraph(x_points.data(), y_points.data(), colorsArray, x_points.size(), xAxisY, 2.0, 1, canvasWidth);
 
     drawLine(yAxisX, xAxisY, canvasWidth - MARGIN_RIGHT, xAxisY, "white", 1.5, .65);
     drawLine(yAxisX, xAxisY, yAxisX, MARGIN_TOP, "white", 1.5, .65);
@@ -394,6 +397,7 @@ void runKullbackTest(const char* inputBytes, double threshold, int maxKeyLength,
             if ((!isHexDigit(inputBytes[i]) || !isHexDigit(inputBytes[i+1])) && !ignoreErrors) {
                 clearCanvas();
                 drawText("invalid input", (canvasWidth / 2.0) - 30, (canvasHeight / 2.0), "#FFA86A", 32, 0.0, "center");
+                g_valid = false;
                 return;
             }
             char hexByte[3] = { inputBytes[i], inputBytes[i+1], '\0' };
@@ -406,6 +410,7 @@ void runKullbackTest(const char* inputBytes, double threshold, int maxKeyLength,
             if (!isBase64Char(inputBytes[i]) && !ignoreErrors) {
                 clearCanvas();
                 drawText("invalid input", (canvasWidth / 2.0) - 30, (canvasHeight / 2.0), "#FFA86A", 32, 0.0, "center");
+                g_valid = false;
                 return;
             }
         }
@@ -420,6 +425,7 @@ void runKullbackTest(const char* inputBytes, double threshold, int maxKeyLength,
                 } else if (inputBytes[i+j] != '0' && !ignoreErrors) {
                     clearCanvas();
                     drawText("invalid input", (canvasWidth / 2.0) - 30, (canvasHeight / 2.0), "#FFA86A", 32, 0.0, "center");
+                    g_valid = false;
                     return;
                 }
             }
