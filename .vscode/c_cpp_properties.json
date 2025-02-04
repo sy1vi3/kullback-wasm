@@ -1,0 +1,17 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/mnt/c/users/sy1vi3/Desktop/software/emsdk/upstream/emscripten/cache/sysroot/**"
+            ],
+            "defines": [],
+            "compilerPath": "/mnt/c/users/sy1vi3/Desktop/software/emsdk/upstream/emscripten/em++",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "linux-clang-x64"
+        }
+    ],
+    "version": 4
+}

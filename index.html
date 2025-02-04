@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>Kullback Test (WebAssembly)</title>
+    <link rel="stylesheet" href="https://sylvie.fyi/styles.css">
+    <script src="https://kit.fontawesome.com/081263bd39.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div class="kullback-container">
+        <h3>Kullback Test:</h3>
+        <div class="data-input-box">
+            <div class="input-type-choices">
+                <span class="input-type-choice selected" onclick="inputTypeChange(this)" value="utf-8">utf-8</span>
+                <span class="input-type-choice" onclick="inputTypeChange(this)" value="hex">hex</span>
+                <span class="input-type-choice" onclick="inputTypeChange(this)" value="base64">base64</span>
+                <span class="input-type-choice" onclick="inputTypeChange(this)" value="binary">binary</span>
+                <span class="input-type-choice file" onclick="inputTypeChange(this)" value="file">file</span>
+            </div>
+            <textarea id="kullback-input" rows="5" cols="50" onkeyup="runKullback()" placeholder="mrrp meow"></textarea>
+            <label for="fileInput" class="file-input-label"><span class="file-label-text"><span class="file-name">choose file</span><br><span class="file-size"></span></span></label>
+            <input type="file" id="fileInput">
+            <div class="options-collapse closed"><i class="fas fa-caret-right options-icon"></i> options</div>
+            <div class="data-options" style="max-height: 0px;">
+                <div class="data-option max-length">max key length: <input type="number" id="maxKeyLengthInput" value="60" onkeyup="reRunTest()"/></div>
+                <div class="data-option show-peaks">show peak labels: <input type="checkbox" id="alwaysOnCheckbox" onclick="reRunTest()"/></div>
+                <div class="data-option label-threshold">peak threshold: <input type="number" id="thInput" value="0.85" onkeyup="reRunTest()"/></div>
+            </div>
+        </div>
+        
+        <canvas id="graphCanvas" onmousemove="onCanvasMouseMove(event)" onmouseleave="onCanvasMouseLeave()" class="hidden"></canvas>
+    </div>
+    <style>
+        canvas {
+            width: 100%;
+            height: 400px;
+            border: 1px solid var(--option-color);
+            padding-top: 10px;
+            padding-bottom: 10px;
+            display: block;
+            cursor: crosshair;
+        }
+        .file-label-text {
+            margin: auto;
+            vertical-align: middle;
+            text-align: center;
+        }
+        .file-input-label {
+            border: 1px solid var(--option-color);
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+        }
+        #fileInput::file-selector-button {
+            display: none;
+        }
+        #fileInput {
+            opacity: 0;
+            height: 0.1px;
+            width: 0.1px;
+            position: absolute;
+        }
+        .data-input-box:has(.input-type-choice.file.selected) #kullback-input {
+            display: none;
+        }
+        .data-input-box:not(:has(.input-type-choice.file.selected)) #fileInput, .data-input-box:not(:has(.input-type-choice.file.selected)) .file-input-label {
+            display: none;
+        }
+        .data-option {
+            text-align: center;
+        }
+        .data-option input[type="number"]{
+            width: 3em;
+            height: 1em;
+            border-color: var(--option-color);
+            color: var(--option-color);
+            padding: 10px 2px 10px 2px;
+        }
+        .label-threshold {
+            transition: all 0.25s ease-out;
+            overflow: hidden;
+            text-wrap: nowrap;
+        }
+        .data-options:has(input#alwaysOnCheckbox:checked) > .label-threshold {
+            max-width: 200px;
+        }
+        .data-options:not(:has(input#alwaysOnCheckbox:checked)) > .label-threshold {
+            max-width: 0px;
+            opacity: 0;
+        }
+        input[type="checkbox"] {
+            border-color: var(--option-color);
+            color: var(--option-color);
+        }
+        input[type="checkbox"]:checked {
+            background: var(--option-color);
+        }
+        .options-collapse {
+            cursor: pointer;
+            user-select: none;
+            background-color: var(--option-color);
+            padding: 5px 10px 5px 10px;
+        }
+        .options-icon {
+            transition: all 0.25s ease-out;
+        }
+        .options-icon.open {
+            transform: rotate(90deg);
+        }
+        .data-options {
+            overflow-y: hidden;
+            background-color: color-mix(in srgb, var(--option-color) 10%, #ffffff00 60%);
+            transition: all 0.25s ease-out;
+            padding-left: 10px;
+            padding-right: 10px;
+            display: flex;
+            justify-content: space-around;
+        }
+        .data-options.open {
+            padding-top: 10px;
+            padding-bottom: 10px;
+        }
+        .kullback-container{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 784px;
+            margin: auto;
+            gap: 20px;
+        }
+        .input-type-choices {
+            display: flex;
+        }
+        .input-type-choice {
+            padding: 5px;
+            background-color: var(--option-color);
+            flex-grow: 1;
+            text-align: center;
+            cursor: pointer;
+            user-select: none;
+        }
+        .input-type-choice:not(.selected){
+            background-color: color-mix(in srgb, var(--option-color) 50%, #333333 100%);
+        }
+        .input-type-choice:not(.selected):hover{
+            background-color: color-mix(in srgb, var(--option-color) 90%, #333333 100%);
+        }
+        #kullback-input, .file-input-label {
+            margin: 0;
+            border-color: var(--option-color);
+            height: 145px;
+            color: var(--option-color);
+            resize: vertical;
+            width: 100%;
+        }
+        #kullback-input:focus, .data-option input:focus, .file-input-label:focus{
+            outline: none !important;
+            border-color: color-mix(in srgb, var(--option-color) 80%, #ffffff 20%) !important;
+        }
+        .input-type-choice:nth-of-type(4n+1), .kullback-container:has(.input-type-choice:nth-of-type(4n+1).selected) {
+            --option-color: var(--accent-pink);
+        }
+        .input-type-choice:nth-of-type(4n+2), .kullback-container:has(.input-type-choice:nth-of-type(4n+2).selected) {
+            --option-color: var(--accent-purple);
+        }
+        .input-type-choice:nth-of-type(4n+3), .kullback-container:has(.input-type-choice:nth-of-type(4n+3).selected) {
+            --option-color: var(--accent-blue);
+        }
+        .input-type-choice:nth-of-type(4n+4), .kullback-container:has(.input-type-choice:nth-of-type(4n+4).selected) {
+            --option-color: var(--accent-green);
+        }
+        .data-input-box {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        ::placeholder {
+            color: color-mix(in srgb, var(--option-color), transparent 50%) !important;
+        }
+    </style>
+    <script src="kullback.js"></script>
+    <script>
+        const canvas = document.getElementById('graphCanvas')
+        const settingsButton = document.querySelector(".options-collapse")
+        const settingsBox = document.querySelector(".data-options")
+        const dataInput = document.querySelector("#kullback-input")
+        const maxKeyInput = document.getElementById("maxKeyLengthInput")
+        const thInput = document.getElementById("thInput")
+        const alwaysOnInput = document.getElementById("alwaysOnCheckbox")
+        const inputTypeChoices = document.querySelector(".input-type-choices")
+        const fileUpload = document.querySelector("#fileInput")
+        const fileUploadLabel = document.querySelector(".file-label-text")
+
+
+        var savedContent = {
+            'utf-8': '',
+            'hex': '',
+            'base64': '',
+            'binary': '',
+            'file': null
+        }
+        const placeholders = {
+            'utf-8': 'mrrp meow',
+            'hex': '6d727270206d656f77',
+            'base64': 'bXJycCBtZW93',
+            'binary': '011011010111001001110010011100000010000001101101011001010110111101110111'
+        }
+        var inputType = "utf-8"
+
+        settingsButton.addEventListener("click",()=>{
+            if (!settingsButton.querySelector(".options-icon").classList.contains("open")){
+                settingsButton.querySelector(".options-icon").classList.add("open")
+                settingsBox.style.maxHeight = "50px"
+                settingsBox.classList.add("open")
+                
+            } else{
+                settingsBox.style.maxHeight = "0px";
+                settingsButton.querySelector(".options-icon").classList.remove("open")
+                settingsBox.classList.remove("open")
+            }
+        })
+        var testRun = false
+        function resizeCanvas() {
+            canvas.setAttribute("width", canvas.offsetWidth)
+            canvas.setAttribute("height", canvas.offsetHeight)
+        }
+
+        function inputTypeChange(e) {
+            savedContent[inputType] = dataInput.value
+            inputTypeChoices.querySelectorAll(".input-type-choice").forEach((i)=>{
+                if(i == e) {
+                    i.classList.add("selected")
+                    inputType = i.getAttribute("value")
+                    dataInput.value = savedContent[inputType]
+                    dataInput.setAttribute('placeholder', placeholders[inputType])
+                } else {
+                    i.classList.remove("selected")
+                }
+            })
+        }
+
+        function runKullback() {
+            canvas.classList.remove("hidden")
+            resizeCanvas()
+            if(inputType == "file"){
+                Module.ccall('runKullbackTest',null,['string','number','number','number','number','number', 'string','number'],
+                [savedContent['file'], parseFloat(thInput.value), parseInt(maxKeyInput.value, 10), alwaysOnInput.checked ? 1 : 0, canvas.width, canvas.height, inputType,savedContent['file'].length])
+            }
+            else {
+                Module.ccall('runKullbackTest',null,['string','number','number','number','number','number', 'string','number'],
+                [dataInput.value, parseFloat(thInput.value), parseInt(maxKeyInput.value, 10), alwaysOnInput.checked ? 1 : 0, canvas.width, canvas.height, inputType,dataInput.value.length])
+            }
+            testRun = true
+        }
+
+        function onCanvasMouseMove(e) {
+            if (testRun){
+                resizeCanvas()
+                const rect = e.target.getBoundingClientRect();
+                const mx   = e.clientX - rect.left;
+                const my   = e.clientY - rect.top;
+                Module.ccall('highlightAt', null, ['number','number','number','number'], [mx, my, canvas.width, canvas.height])
+            }
+        }
+
+        function onCanvasMouseLeave() {
+            if (testRun){
+                resizeCanvas()
+                Module.ccall('highlightAt', null, ['number','number','number','number'], [-9999, -9999, canvas.width, canvas.height])
+            }
+        }
+
+        onresize = (event) => {
+            if (testRun) {
+                runKullback()
+            }
+        }
+
+        function reRunTest(){
+            if (testRun) {
+                runKullback()
+            }
+        }
+
+        function fileSizeString(s) {
+            if (s > 1024*1024*1024){
+                return (s / (1024*1024*1024)).toFixed(2) + " GiB"
+            } 
+            else if (s > 1024*1024) {
+                return (s / (1024*1024)).toFixed(2) + " MiB"
+            }
+            else if (s > 1024) {
+                return (s / (1024)).toFixed(2) + " KiB"
+            }
+            else {
+                return s.toString() + " bytes"
+            }
+        }
+        fileUpload.addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            fileUploadLabel.querySelector(".file-name").textContent = file.name
+            fileUploadLabel.querySelector(".file-size").textContent = fileSizeString(file.size)
+            var reader = new FileReader();
+            reader.onload = function(event) {
+                resizeCanvas()
+                var bytes = new Uint8Array(event.target.result);
+                savedContent['file'] = Array.from(bytes).map((i) => i.toString(16).padStart(2, '0')).join('');
+                runKullback()
+            };
+            reader.readAsArrayBuffer(file);
+        });
+    </script>
+</body>
+</html>
