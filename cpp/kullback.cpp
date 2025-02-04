@@ -48,7 +48,7 @@ EM_JS(void, drawGraph, (int* x, int* y, const char** colors, int points, double 
     var controlPoints = {};
     var bezierAmount = points;
     if(graphWidth < 700) {
-        points *= (700/graphWidth)*2;
+        bezierAmount *= (700-graphWidth)/50;
     }
     for(let i = 0; i < points; i++) {
         let X = xVals[i];
@@ -494,7 +494,8 @@ void runKullbackTest(const char* inputBytes, double threshold, int maxKeyLength,
 EMSCRIPTEN_KEEPALIVE
 void highlightAt(double mx, double my, double canvasWidth, double canvasHeight) {
     if (!g_valid) {
-        // clearCanvas();
+        clearCanvas();
+        drawText("invalid input", (canvasWidth / 2.0) - 30, (canvasHeight / 2.0), "#FFA86A", 32, 0.0, "center");
         return;
     }
 
