@@ -48,7 +48,7 @@ EM_JS(void, drawGraph, (int* x, int* y, const char** colors, int points, double 
     var controlPoints = {};
     var bezierAmount = points;
     if(graphWidth < 700) {
-        bezierAmount *= (700-graphWidth)/50;
+        bezierAmount *= (800-graphWidth)/100;
     }
     for(let i = 0; i < points; i++) {
         let X = xVals[i];
