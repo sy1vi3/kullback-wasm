@@ -1369,7 +1369,7 @@ var wasmImports = {
 var wasmExports;
 createWasm();
 var ___wasm_call_ctors = createExportWrapper('__wasm_call_ctors', 0);
-var _runKullbackTest = Module['_runKullbackTest'] = createExportWrapper('runKullbackTest', 8);
+var _runKullbackTest = Module['_runKullbackTest'] = createExportWrapper('runKullbackTest', 9);
 var _highlightAt = Module['_highlightAt'] = createExportWrapper('highlightAt', 4);
 var _fflush = createExportWrapper('fflush', 1);
 var _strerror = createExportWrapper('strerror', 1);

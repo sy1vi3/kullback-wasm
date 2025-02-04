@@ -360,9 +360,24 @@ std::vector<unsigned char> base64_decode(const std::string &encoded_string) {
   return ret;
 }
 
+bool isHexDigit(char c) {
+    return (c >= '0' && c <= '9') ||
+           (c >= 'A' && c <= 'F') ||
+           (c >= 'a' && c <= 'f');
+}
+
+bool isBase64Char(char c) {
+    return (c >= 'A' && c <= 'Z') ||
+           (c >= 'a' && c <= 'z') ||
+           (c >= '0' && c <= '9') ||
+           (c == '+') ||
+           (c == '/') ||
+           (c == '=');
+}
+
 extern "C" {
 EMSCRIPTEN_KEEPALIVE
-void runKullbackTest(const char* inputBytes, double threshold, int maxKeyLength, int alwaysOn, double canvasWidth, double canvasHeight, const char* dataType, int inputLength) {
+void runKullbackTest(const char* inputBytes, double threshold, int maxKeyLength, int alwaysOn, double canvasWidth, double canvasHeight, const char* dataType, int inputLength, int ignoreErrors) {
     g_valid = false;
     g_xvals.clear();
     g_yvals.clear();
@@ -376,12 +391,24 @@ void runKullbackTest(const char* inputBytes, double threshold, int maxKeyLength,
         raw.assign(inputBytes, inputBytes + std::strlen(inputBytes));
     } else if (type == "hex" || type == "file") {
         for (int i = 0; i + 1 < inputLength; i += 2) {
+            if ((!isHexDigit(inputBytes[i]) || !isHexDigit(inputBytes[i+1])) && !ignoreErrors) {
+                clearCanvas();
+                drawText("invalid input", (canvasWidth / 2.0) - 30, (canvasHeight / 2.0), "#FFA86A", 32, 0.0, "center");
+                return;
+            }
             char hexByte[3] = { inputBytes[i], inputBytes[i+1], '\0' };
             unsigned int byte;
             std::sscanf(hexByte, "%x", &byte);
             raw.push_back(static_cast<unsigned char>(byte));
         }
     } else if (type == "base64") {
+        for (int i = 0; i < inputLength; i++) {
+            if (!isBase64Char(inputBytes[i]) && !ignoreErrors) {
+                clearCanvas();
+                drawText("invalid input", (canvasWidth / 2.0) - 30, (canvasHeight / 2.0), "#FFA86A", 32, 0.0, "center");
+                return;
+            }
+        }
         raw = base64_decode(std::string(inputBytes, inputLength));
     } else if (type == "binary") {
         for (int i = 0; i < inputLength; i += 8) {
@@ -390,6 +417,10 @@ void runKullbackTest(const char* inputBytes, double threshold, int maxKeyLength,
                 byte <<= 1;
                 if (inputBytes[i+j] == '1') {
                     byte |= 1;
+                } else if (inputBytes[i+j] != '0' && !ignoreErrors) {
+                    clearCanvas();
+                    drawText("invalid input", (canvasWidth / 2.0) - 30, (canvasHeight / 2.0), "#FFA86A", 32, 0.0, "center");
+                    return;
                 }
             }
             raw.push_back(byte);
@@ -457,7 +488,7 @@ void runKullbackTest(const char* inputBytes, double threshold, int maxKeyLength,
 EMSCRIPTEN_KEEPALIVE
 void highlightAt(double mx, double my, double canvasWidth, double canvasHeight) {
     if (!g_valid) {
-        clearCanvas();
+        // clearCanvas();
         return;
     }
 

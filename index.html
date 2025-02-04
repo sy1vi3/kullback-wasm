@@ -23,11 +23,11 @@
             <div class="options-collapse closed"><i class="fas fa-caret-right options-icon"></i> options</div>
             <div class="data-options" style="max-height: 0px;">
                 <div class="data-option max-length">max key length: <input type="number" id="maxKeyLengthInput" value="60" onkeyup="reRunTest()"/></div>
+                <div class="data-option ignore-errors">ignore errors: <input type="checkbox" id="ignoreErrors" onclick="reRunTest()"/></div>
                 <div class="data-option show-peaks">show peak labels: <input type="checkbox" id="alwaysOnCheckbox" onclick="reRunTest()"/></div>
                 <div class="data-option label-threshold">peak threshold: <input type="number" id="thInput" value="0.85" onkeyup="reRunTest()"/></div>
             </div>
         </div>
-        
         <canvas id="graphCanvas" onmousemove="onCanvasMouseMove(event)" onmouseleave="onCanvasMouseLeave()" class="hidden"></canvas>
     </div>
     <style>
@@ -195,6 +195,7 @@
         const inputTypeChoices = document.querySelector(".input-type-choices")
         const fileUpload = document.querySelector("#fileInput")
         const fileUploadLabel = document.querySelector(".file-label-text")
+        const ignoreErrors = document.querySelector("#ignoreErrors")
 
 
         var savedContent = {
@@ -215,11 +216,11 @@
         settingsButton.addEventListener("click",()=>{
             if (!settingsButton.querySelector(".options-icon").classList.contains("open")){
                 settingsButton.querySelector(".options-icon").classList.add("open")
-                settingsBox.style.maxHeight = "50px"
+                settingsBox.style.height = "100%"
                 settingsBox.classList.add("open")
                 
             } else{
-                settingsBox.style.maxHeight = "0px";
+                settingsBox.style.height = "0px";
                 settingsButton.querySelector(".options-icon").classList.remove("open")
                 settingsBox.classList.remove("open")
             }
@@ -248,12 +249,12 @@
             canvas.classList.remove("hidden")
             resizeCanvas()
             if(inputType == "file"){
-                Module.ccall('runKullbackTest',null,['string','number','number','number','number','number', 'string','number'],
-                [savedContent['file'], parseFloat(thInput.value), parseInt(maxKeyInput.value, 10), alwaysOnInput.checked ? 1 : 0, canvas.width, canvas.height, inputType,savedContent['file'].length])
+                Module.ccall('runKullbackTest',null,['string','number','number','number','number','number','string','number','number'],
+                [savedContent['file'], parseFloat(thInput.value), parseInt(maxKeyInput.value, 10), alwaysOnInput.checked ? 1 : 0, canvas.width, canvas.height, inputType,savedContent['file'].length, ignoreErrors.checked ? 1 : 0])
             }
             else {
-                Module.ccall('runKullbackTest',null,['string','number','number','number','number','number', 'string','number'],
-                [dataInput.value, parseFloat(thInput.value), parseInt(maxKeyInput.value, 10), alwaysOnInput.checked ? 1 : 0, canvas.width, canvas.height, inputType,dataInput.value.length])
+                Module.ccall('runKullbackTest',null,['string','number','number','number','number','number','string','number'],
+                [dataInput.value, parseFloat(thInput.value), parseInt(maxKeyInput.value, 10), alwaysOnInput.checked ? 1 : 0, canvas.width, canvas.height, inputType,dataInput.value.length, ignoreErrors.checked ? 1 : 0])
             }
             testRun = true
         }
@@ -314,7 +315,7 @@
                 runKullback()
             };
             reader.readAsArrayBuffer(file);
-        });
+        })
     </script>
 </body>
 </html>
